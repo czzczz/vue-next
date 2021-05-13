@@ -20,6 +20,13 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
+/**
+ * 计算属性的构建类
+ *
+ * @class
+ * @template T
+ * @date 2021-05-12
+ */
 class ComputedRefImpl<T> {
   private _value!: T
   private _dirty = true
@@ -29,12 +36,23 @@ class ComputedRefImpl<T> {
   public readonly __v_isRef = true;
   public readonly [ReactiveFlags.IS_READONLY]: boolean
 
+  /**
+   * Creates an instance of ComputedRefImpl.
+   *
+   * @date 2021-05-12
+   * @param {ComputedGetter<T>} getter // 计算属性的Getter
+   * @param {ComputedSetter<T>} _setter // 计算属性的Setter
+   * @param {boolean} isReadonly 是否只读
+   * @memberof ComputedRefImpl
+   */
   constructor(
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    // effect创建一个副作用
     this.effect = effect(getter, {
+      // computed 为 Lazy Watch
       lazy: true,
       scheduler: () => {
         if (!this._dirty) {
@@ -74,6 +92,7 @@ export function computed<T>(
   let setter: ComputedSetter<T>
 
   if (isFunction(getterOrOptions)) {
+    // 若computed接受了一个函数，那么视为Getter
     getter = getterOrOptions
     setter = __DEV__
       ? () => {
@@ -85,6 +104,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
+  // 如果只传了Getter那么该计算属性只读
   return new ComputedRefImpl(
     getter,
     setter,

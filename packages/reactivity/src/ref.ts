@@ -27,10 +27,27 @@ export type ToRefs<T = any> = {
   [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
 }
 
+/**
+ * 对值进行深度代理转换，即递归地为属性增加监听器
+ * 若不是引用数据则直接返回。
+ * 若是引用型则直接通过 reactive 进行递归代理
+ *
+ * @function convert
+ * @template T
+ * @param {T} val 目标值
+ * @returns {T} 转换结果
+ */
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
+/**
+ * 判断一个值是否为ref引用
+ *
+ * @function isRef
+ * @param {any} r 目标值
+ * @returns {boolean} 判断结果
+ */
 export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
@@ -38,6 +55,13 @@ export function isRef(r: any): r is Ref {
 export function ref<T extends object>(value: T): ToRef<T>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
+/**
+ * 生成一个ref
+ *
+ * @function ref
+ * @param {unknown} [value] 初始值
+ * @returns {Ref} 结果引用
+ */
 export function ref(value?: unknown) {
   return createRef(value)
 }
@@ -47,20 +71,38 @@ export function shallowRef<T extends object>(
 ): T extends Ref ? T : Ref<T>
 export function shallowRef<T>(value: T): Ref<T>
 export function shallowRef<T = any>(): Ref<T | undefined>
+/**
+ * 生成一个浅代理的ref
+ *
+ * @function shallowRef
+ * @param {unknown} [value] 初始值
+ * @returns {Ref} 返回的引用
+ */
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+/**
+ * ref类
+ *
+ * @class
+ * @template T
+ * @date 2021-05-11
+ */
 class RefImpl<T> {
+  // 存放值
   private _value: T
 
+  // 用于isRef判断是否为一个ref
   public readonly __v_isRef = true
 
   constructor(private _rawValue: T, public readonly _shallow = false) {
+    // 如果是浅代理，则只为Ref.value生成代理。否则将深度地对整个值进行代理转换
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
   get value() {
+    // 添加Get监听
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
@@ -69,13 +111,23 @@ class RefImpl<T> {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
+      // 值改变，触发当前值的副作用
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
   }
 }
 
+/**
+ * 新增一个ref值
+ *
+ * @function createRef
+ * @param {unknown} rawValue ref的初始值
+ * @param {boolean} [shallow=false] 是否为浅代理，若为true则不会对rawValue进行一个深度的代理转换
+ * @returns {RefImpl} 返回一个新的ref引用
+ */
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
+    // 已经是一个ref，直接返回
     return rawValue
   }
   return new RefImpl(rawValue, shallow)

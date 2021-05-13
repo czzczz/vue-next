@@ -57,17 +57,71 @@ export const hasOwn = (
   key: string | symbol
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
+/**
+ * 判断目标是否为一个数组
+ *
+ * @param {any} arg 目标
+ * @returns {boolean} 结果
+ */
 export const isArray = Array.isArray
+
+/**
+ * 判断目标是否为一个Map
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'
+
+/**
+ * 判断目标是否为一个Set
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
+/**
+ * 判断目标是否为一个Date实例
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isDate = (val: unknown): val is Date => val instanceof Date
+
+/**
+ * 判断目标是否为一个函数
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
+
+/**
+ *  判断是否为字符串
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isString = (val: unknown): val is string => typeof val === 'string'
+
+/**
+ * 判断一个值是否为symbol
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
+
+/**
+ * 判断一个对象是否为引用型变量
+ *
+ * @param {unknown} val 目标
+ * @returns {boolean} 结果
+ */
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
@@ -76,9 +130,22 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
 }
 
 export const objectToString = Object.prototype.toString
+/**
+ * 通过Object.prototype.toString获取变量类型
+ * 格式为：[object XXX]
+ *
+ * @param {unknown} value 变量
+ * @returns {string} 类型字符串
+ */
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
+/**
+ * 将变量类型字符串切割出有辨识度的部分
+ *
+ * @param {unknown} value 变量
+ * @returns {string} 类型字符串
+ */
 export const toRawType = (value: unknown): string => {
   // extract "RawType" from strings like "[object RawType]"
   return toTypeString(value).slice(8, -1)
@@ -87,6 +154,14 @@ export const toRawType = (value: unknown): string => {
 export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
 
+/**
+ * 判断目标是否可作为数组的Key
+ *
+ * 自然数的字符串，如'1'
+ *
+ * @param {unknown} key 变量
+ * @returns {boolean} 结果
+ */
 export const isIntegerKey = (key: unknown) =>
   isString(key) &&
   key !== 'NaN' &&
@@ -142,6 +217,12 @@ export const toHandlerKey = cacheStringFunction(
 )
 
 // compare whether a value has changed, accounting for NaN.
+/**
+ * 判断新值旧值是否发生变化，NaN也处理了
+ * @param {any} value 新值
+ * @param {any} oldValue 旧值
+ * @returns {boolean} 结果
+ */
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
 

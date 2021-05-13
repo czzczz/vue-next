@@ -356,6 +356,9 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   }
 }
 
+/**
+ * 创建响应式集合（Set、Map）要用到的处理器
+ */
 export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
   get: createInstrumentationGetter(false, false)
 }
