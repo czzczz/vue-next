@@ -42,6 +42,9 @@ export const isOn = (key: string) => onRE.test(key)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
+/**
+ * 对对象进行非深度的扩展 Object.assign
+ */
 export const extend = Object.assign
 
 export const remove = <T>(arr: T[], el: T) => {

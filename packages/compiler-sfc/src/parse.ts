@@ -116,6 +116,7 @@ export function parse(
     getTextMode: ({ tag, props }, parent) => {
       // all top level elements except <template> are parsed as raw text
       // containers
+      // template以外的顶层节点都作为文本解析（sript、style标签内容，里面放的是JS和StyleSheet，需要转交给别的解析器），其他都是DATA
       if (
         (!parent && tag !== 'template') ||
         // <template lang="xxx"> should also be treated as raw text

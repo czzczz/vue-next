@@ -87,6 +87,16 @@ export function getInnerRange(
   return newLoc
 }
 
+/**
+ * 根据指针前移数量重新计算Position，同时进行拷贝
+ *
+ * @function advancePositionWithClone
+ * @author czzczz
+ * @param {Position} pos 源位置
+ * @param {string} source 字符串
+ * @param {number} [numberOfCharacters=source.length] 前移的长度
+ * @returns {Position} 新的位置（Copy）
+ */
 export function advancePositionWithClone(
   pos: Position,
   source: string,
@@ -99,6 +109,16 @@ export function advancePositionWithClone(
   )
 }
 
+/**
+ * 根据指针前移数量重新计算Position
+ *
+ * @function advancePositionWithMutation
+ * @author czzczz
+ * @param {Position} pos 原始Posiotion
+ * @param {string} source 源码串
+ * @param {number} [numberOfCharacters=source.length] 前移位数
+ * @returns {Position} 新的位置
+ */
 // advance by mutation without cloning (for performance reasons), since this
 // gets called a lot in the parser
 export function advancePositionWithMutation(
@@ -109,18 +129,21 @@ export function advancePositionWithMutation(
   let linesCount = 0
   let lastNewLinePos = -1
   for (let i = 0; i < numberOfCharacters; i++) {
+    // 统计前移指针涉及换行数
     if (source.charCodeAt(i) === 10 /* newline char code */) {
       linesCount++
       lastNewLinePos = i
     }
   }
 
+  // 解析位置前移
   pos.offset += numberOfCharacters
+  // 行数
   pos.line += linesCount
   pos.column =
     lastNewLinePos === -1
-      ? pos.column + numberOfCharacters
-      : numberOfCharacters - lastNewLinePos
+      ? pos.column + numberOfCharacters // 本次前移没有涉及换行，直接加后移数
+      : numberOfCharacters - lastNewLinePos // 计算列位置
 
   return pos
 }

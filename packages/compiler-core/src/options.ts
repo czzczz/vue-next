@@ -19,18 +19,22 @@ export interface ParserOptions
     CompilerCompatOptions {
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
+   * 是否为原生HTML标签
    */
   isNativeTag?: (tag: string) => boolean
   /**
    * e.g. native elements that can self-close, e.g. `<img>`, `<br>`, `<hr>`
+   * 是否为可自闭合标签
    */
   isVoidTag?: (tag: string) => boolean
   /**
    * e.g. elements that should preserve whitespace inside, e.g. `<pre>`
+   * 是否是Pre标签
    */
   isPreTag?: (tag: string) => boolean
   /**
    * Platform-specific built-in components e.g. `<Transition>`
+   * 是否为Vue内建组件
    */
   isBuiltInComponent?: (tag: string) => symbol | void
   /**

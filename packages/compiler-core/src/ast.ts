@@ -76,9 +76,18 @@ export interface SourceLocation {
   source: string
 }
 
+/**
+ * 描述文本文件内位置的信息
+ *
+ * @interface
+ * @author czzczz
+ */
 export interface Position {
+  // 基于开始位置的偏差（字符为单位）
   offset: number // from start of file
+  // 行
   line: number
+  // 列
   column: number
 }
 
@@ -97,6 +106,12 @@ export type TemplateChildNode =
   | ForNode
   | TextCallNode
 
+/**
+ * Node的根节点
+ *
+ * @interface
+ * @extends Node
+ */
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
@@ -196,6 +211,7 @@ export interface DirectiveNode extends Node {
  * Static types have several levels.
  * Higher levels implies lower levels. e.g. a node that can be stringified
  * can always be hoisted and skipped for patch.
+ * 节点标记
  */
 export const enum ConstantTypes {
   NOT_CONSTANT = 0,
