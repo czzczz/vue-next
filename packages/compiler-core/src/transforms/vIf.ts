@@ -116,6 +116,7 @@ export function processIf(
       loc: node.loc,
       branches: [branch]
     }
+    // 解析到v-if节点，生成新的节点替换AST上的原节点
     context.replaceNode(ifNode)
     if (processCodegen) {
       return processCodegen(ifNode, branch, true)
@@ -191,6 +192,7 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
+    // 如果是v-else那么没有条件，否则为等号后的表达式
     condition: dir.name === 'else' ? undefined : dir.exp,
     children:
       node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
@@ -288,6 +290,15 @@ function createChildrenCodegenNode(
   }
 }
 
+/**
+ * 判断两个v-if及v-else-if条件是否为同一表达式
+ *
+ * @function isSameKey
+ * @author czzczz
+ * @param {AttributeNode | DirectiveNode | undefined} a
+ * @param {AttributeNode | DirectiveNode} b
+ * @returns {any}
+ */
 function isSameKey(
   a: AttributeNode | DirectiveNode | undefined,
   b: AttributeNode | DirectiveNode

@@ -122,6 +122,13 @@ export type Plugin =
       install: PluginInstallFunction
     }
 
+/**
+ * 创建当前App的上下文
+ *
+ * @function createAppContext
+ * @author czzczz
+ * @returns {object}
+ */
 export function createAppContext(): AppContext {
   return {
     app: null as any,
@@ -152,6 +159,15 @@ export function createAppAPI<HostElement>(
   render: RootRenderFunction,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
+  /**
+   * 对外暴露的createApp，即main里引用的
+   *
+   * @function createApp
+   * @author czzczz
+   * @param {Component} rootComponent 根组件
+   * @param {Data | null} [rootProps=null] 参数
+   * @returns {App<any>} app实例
+   */
   return function createApp(rootComponent, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
@@ -161,6 +177,7 @@ export function createAppAPI<HostElement>(
     const context = createAppContext()
     const installedPlugins = new Set()
 
+    // 当前App是否挂载
     let isMounted = false
 
     const app: App = (context.app = {
@@ -168,6 +185,7 @@ export function createAppAPI<HostElement>(
       _component: rootComponent as ConcreteComponent,
       _props: rootProps,
       _container: null,
+      // app和context一一对应相互引用
       _context: context,
 
       version,
@@ -184,8 +202,18 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      /**
+       * 使用Vue插件
+       *
+       * @function use
+       * @author czzczz
+       * @param {Plugin} plugin 要使用的插件
+       * @param {...any[]} options
+       * @returns {App<any>}
+       */
       use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
+          // 防止重复挂载
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (plugin && isFunction(plugin.install)) {
           installedPlugins.add(plugin)
@@ -199,9 +227,18 @@ export function createAppAPI<HostElement>(
               `function.`
           )
         }
+        // 提供链式调用
         return app
       },
 
+      /**
+       * 全局Mixin
+       *
+       * @function mixin
+       * @author czzczz
+       * @param {ComponentOptions} mixin 要混入的配置
+       * @returns {App<any>}
+       */
       mixin(mixin: ComponentOptions) {
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
@@ -223,11 +260,21 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      /**
+       * 全局注册组件
+       *
+       * @function component
+       * @author czzczz
+       * @param {string} name
+       * @param {Component} [component]
+       * @returns {any}
+       */
       component(name: string, component?: Component): any {
         if (__DEV__) {
           validateComponentName(name, context.config)
         }
         if (!component) {
+          // 若没有传入组件则返回对应名称的已注册组件
           return context.components[name]
         }
         if (__DEV__ && context.components[name]) {
@@ -237,6 +284,15 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      /**
+       * 全局注册自定义指令
+       *
+       * @function directive
+       * @author czzczz
+       * @param {string} name
+       * @param {Directive} [directive]
+       * @returns {any}
+       */
       directive(name: string, directive?: Directive) {
         if (__DEV__) {
           validateDirectiveName(name)
@@ -252,6 +308,16 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      /**
+       * 挂载app
+       *
+       * @function mount
+       * @author czzczz
+       * @param {HostElement} rootContainer
+       * @param {boolean} [isHydrate]
+       * @param {boolean} [isSVG]
+       * @returns {any}
+       */
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
@@ -264,10 +330,13 @@ export function createAppAPI<HostElement>(
           )
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
+          // mount的时候在app的根节点VNode上保留当前app的context
           vnode.appContext = context
 
+          // 重新渲染
           // HMR root reload
           if (__DEV__) {
+            // 开发模式下热重载用的
             context.reload = () => {
               render(cloneVNode(vnode), rootContainer, isSVG)
             }
@@ -298,6 +367,12 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      /**
+       * 取消挂载
+       *
+       * @function unmount
+       * @author czzczz
+       */
       unmount() {
         if (isMounted) {
           render(null, app._container)
@@ -310,6 +385,15 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      /**
+       * 全局的向下注入属性
+       *
+       * @function provide
+       * @author czzczz
+       * @param {any} key
+       * @param {any} value
+       * @returns {any}
+       */
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(

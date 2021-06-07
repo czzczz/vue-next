@@ -123,6 +123,35 @@ export interface TransformContext
   filters?: Set<string>
 }
 
+/**
+ * 创建节点转换的上下文
+ *
+ * @function createTransformContext
+ * @author czzczz
+ * @param {RootNode} root
+ * @param {TransformOptions} root1
+ * @param {string} [root1.filename='']
+ * @param {any} [root1.prefixIdentifiers=false]
+ * @param {any} [root1.hoistStatic=false]
+ * @param {any} [root1.cacheHandlers=false]
+ * @param {undefined[]} [root1.nodeTransforms=[]]
+ * @param {object} [root1.directiveTransforms={}]
+ * @param {any} [root1.transformHoist=null]
+ * @param {any} [root1.isBuiltInComponent=NOOP]
+ * @param {any} [root1.isCustomElement=NOOP]
+ * @param {undefined[]} [root1.expressionPlugins=[]]
+ * @param {any} [root1.scopeId=null]
+ * @param {any} [root1.slotted=true]
+ * @param {any} [root1.ssr=false]
+ * @param {string} [root1.ssrCssVars=``]
+ * @param {any} [root1.bindingMetadata=EMPTY_OBJ]
+ * @param {any} [root1.inline=false]
+ * @param {any} [root1.isTS=false]
+ * @param {any} [root1.onError=defaultOnError]
+ * @param {any} [root1.onWarn=defaultOnWarn]
+ * @param {any} root1.compatConfig
+ * @returns {any}
+ */
 export function createTransformContext(
   root: RootNode,
   {
@@ -151,6 +180,7 @@ export function createTransformContext(
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    // 大驼峰风格的selfName
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
@@ -213,6 +243,13 @@ export function createTransformContext(
     helperString(name) {
       return `_${helperNameMap[context.helper(name)]}`
     },
+    /**
+     * 使用node替换当前解析节点（及所有子节点）
+     *
+     * @function replaceNode
+     * @author czzczz
+     * @param {TemplateChildNode} node
+     */
     replaceNode(node) {
       /* istanbul ignore if */
       if (__DEV__) {
@@ -225,6 +262,13 @@ export function createTransformContext(
       }
       context.parent!.children[context.childIndex] = context.currentNode = node
     },
+    /**
+     * 删除节点
+     *
+     * @function removeNode
+     * @author czzczz
+     * @param {any} node
+     */
     removeNode(node) {
       if (__DEV__ && !context.parent) {
         throw new Error(`Cannot remove root node.`)
@@ -311,6 +355,14 @@ export function createTransformContext(
   return context
 }
 
+/**
+ * 对ast进行转换
+ *
+ * @function transform
+ * @author czzczz
+ * @param {RootNode} root ast根节点
+ * @param {TransformOptions} options 选项，其中包括各种节点的转换方案函数
+ */
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
@@ -387,6 +439,14 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   }
 }
 
+/**
+ * 遍历解析子节点
+ *
+ * @function traverseChildren
+ * @author czzczz
+ * @param {ParentNode} parent
+ * @param {TransformContext} context
+ */
 export function traverseChildren(
   parent: ParentNode,
   context: TransformContext
@@ -405,6 +465,14 @@ export function traverseChildren(
   }
 }
 
+/**
+ * 遍历ast节点
+ *
+ * @function traverseNode
+ * @author czzczz
+ * @param {RootNode | TemplateChildNode} node 节点
+ * @param {TransformContext} context 转换上下文
+ */
 export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext
@@ -461,6 +529,7 @@ export function traverseNode(
   }
 
   // exit transforms
+  // 转换函数执行
   context.currentNode = node
   let i = exitFns.length
   while (i--) {

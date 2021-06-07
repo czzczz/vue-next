@@ -23,6 +23,14 @@ export type TransformPreset = [
   Record<string, DirectiveTransform>
 ]
 
+/**
+ * 获取预设的转换函数
+ *
+ * @function getBaseTransformPreset
+ * @author czzczz
+ * @param {boolean} [prefixIdentifiers]
+ * @returns {TransformPreset}
+ */
 export function getBaseTransformPreset(
   prefixIdentifiers?: boolean
 ): TransformPreset {
@@ -84,6 +92,7 @@ export function baseCompile(
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
     prefixIdentifiers
   )
+  // 对编译出的ast进行特殊参数的转换，包括节点以及一些vue指令
   transform(
     ast,
     extend({}, options, {

@@ -91,6 +91,7 @@ export const transformElement: NodeTransform = (node, context) => {
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
 
+    // 动态组件
     const isDynamicComponent =
       isObject(vnodeTag) && vnodeTag.callee === RESOLVE_DYNAMIC_COMPONENT
 
@@ -231,6 +232,16 @@ export const transformElement: NodeTransform = (node, context) => {
   }
 }
 
+/**
+ * 获取node的组件类型
+ *
+ * @function resolveComponentType
+ * @author czzczz
+ * @param {ComponentNode} node
+ * @param {TransformContext} context
+ * @param {any} [ssr=false]
+ * @returns {any}
+ */
 export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
@@ -238,6 +249,7 @@ export function resolveComponentType(
 ) {
   let { tag } = node
 
+  // 内置组件Component
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
   const isProp =
@@ -281,6 +293,7 @@ export function resolveComponentType(
     }
   }
 
+  // 自引用组件
   // 4. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
@@ -756,6 +769,14 @@ function stringifyDynamicPropNames(props: string[]): string {
   return propsNamesString + `]`
 }
 
+/**
+ * Vue 内置的compoent组件
+ *
+ * @function isComponentTag
+ * @author czzczz
+ * @param {string} tag
+ * @returns {boolean}
+ */
 function isComponentTag(tag: string) {
   return tag[0].toLowerCase() + tag.slice(1) === 'component'
 }

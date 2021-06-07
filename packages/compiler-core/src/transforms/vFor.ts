@@ -102,6 +102,7 @@ export const transformFor = createStructuralDirectiveTransform(
       return () => {
         // finish the codegen now that all children have been traversed
         let childBlock: BlockCodegenNode
+        // v-for在tempalte上
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
 

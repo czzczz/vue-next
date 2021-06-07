@@ -32,6 +32,13 @@ let renderer: Renderer<Element> | HydrationRenderer
 
 let enabledHydration = false
 
+/**
+ * 获取当前的全局renderer，没有则新建
+ *
+ * @function ensureRenderer
+ * @author czzczz
+ * @returns {Renderer<Element> | HydrationRenderer} 全局的renderer
+ */
 function ensureRenderer() {
   return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
@@ -54,6 +61,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  // 调用全局renderer上的createApp
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -62,6 +70,7 @@ export const createApp = ((...args) => {
   }
 
   const { mount } = app
+  // 对App上的mount进行封装，封装后的mount只有一个参数
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
@@ -89,6 +98,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
+    // 挂载会将原本的子节点全部清空
     container.innerHTML = ''
     const proxy = mount(container, false, container instanceof SVGElement)
     if (container instanceof Element) {
@@ -167,6 +177,14 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
+/**
+ * 根据参数获取App要挂载的根节点
+ *
+ * @function normalizeContainer
+ * @author czzczz
+ * @param {Element | ShadowRoot | string} container 根节点或其选择器
+ * @returns {any}
+ */
 function normalizeContainer(
   container: Element | ShadowRoot | string
 ): Element | null {

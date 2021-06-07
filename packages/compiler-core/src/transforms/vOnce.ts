@@ -3,6 +3,9 @@ import { findDir } from '../utils'
 import { ElementNode, ForNode, IfNode, NodeTypes } from '../ast'
 import { SET_BLOCK_TRACKING } from '../runtimeHelpers'
 
+/**
+ * 记录所有添加为v-once的节点
+ */
 const seen = new WeakSet()
 
 export const transformOnce: NodeTransform = (node, context) => {

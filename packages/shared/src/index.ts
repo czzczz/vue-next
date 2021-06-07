@@ -21,7 +21,9 @@ export * from './toDisplayString'
  */
 export const babelParserDefaultPlugins = [
   'bigInt',
+  // 可选链式操作符
   'optionalChaining',
+  // ?? 操作符
   'nullishCoalescingOperator'
 ] as const
 
@@ -189,6 +191,7 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 
 const camelizeRE = /-(\w)/g
 /**
+ * 短线风格字符串转为小驼峰
  * @private
  */
 export const camelize = cacheStringFunction(
@@ -206,6 +209,7 @@ export const hyphenate = cacheStringFunction((str: string) =>
 )
 
 /**
+ * 字符串首字母转为大写
  * @private
  */
 export const capitalize = cacheStringFunction(
@@ -249,6 +253,12 @@ export const toNumber = (val: any): any => {
 }
 
 let _globalThis: any
+
+/**
+ * 获取全局对象
+ *
+ * @returns {any} 全局对象
+ */
 export const getGlobalThis = (): any => {
   return (
     _globalThis ||

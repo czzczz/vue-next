@@ -40,6 +40,9 @@ import { walk } from 'estree-walker'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
+/**
+ * 表达式中可能有的字面量
+ */
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
@@ -197,10 +200,14 @@ export function processExpression(
   const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
 
   if (isSimpleIdentifier(rawExp)) {
+    // 模板作用域
     const isScopeVarReference = context.identifiers[rawExp]
+    // 浏览器环境全局变量
     const isAllowedGlobal = isGloballyWhitelisted(rawExp)
+    // 字面量
     const isLiteral = isLiteralWhitelisted(rawExp)
     if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+      // 字面量可以跳过patch过程
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
       if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {
@@ -218,6 +225,7 @@ export function processExpression(
   }
 
   let ast: any
+  // 不同表达式解析方式不同
   // exp needs to be parsed differently:
   // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
   //    exp, but make sure to pad with spaces for consistent ranges
@@ -227,6 +235,7 @@ export function processExpression(
     ? ` ${rawExp} `
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
+    // 使用babel-parser解析表达式
     ast = parse(source, {
       plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
     }).program
@@ -244,6 +253,7 @@ export function processExpression(
 
   const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
+  // 判断重复的节点
   const isDuplicate = (node: Node & PrefixMeta): boolean =>
     ids.some(id => id.start === node.start)
   const parentStack: Node[] = []
@@ -291,6 +301,7 @@ export function processExpression(
                 !isStaticPropertyKey(child, parent) &&
                 // do not record if this is a default value
                 // assignment of a destructured variable
+                // 参数默认值，不收集
                 !(
                   parent &&
                   parent.type === 'AssignmentPattern' &&
@@ -331,6 +342,7 @@ export function processExpression(
   // an ExpressionNode has the `.children` property, it will be used instead of
   // `.content`.
   const children: CompoundExpressionNode['children'] = []
+  // 所有标识符按出现时间排序后放入children
   ids.sort((a, b) => a.start - b.start)
   ids.forEach((id, i) => {
     // range is offset by -1 due to the wrapping parens when parsed
@@ -372,6 +384,14 @@ export function processExpression(
   return ret
 }
 
+/**
+ * 判断一个节点是否为函数型节点，包括语法含义下的：函数表达式、函数声明、方法
+ *
+ * @function isFunction
+ * @author czzczz
+ * @param {Node} node
+ * @returns {any}
+ */
 const isFunction = (node: Node): node is Function => {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }

@@ -529,6 +529,14 @@ export const setCurrentInstance = (
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
+/**
+ * 校验组件名称
+ *
+ * @function validateComponentName
+ * @author czzczz
+ * @param {string} name
+ * @param {AppConfig} config
+ */
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
   if (isBuiltInTag(name) || appIsNativeTag(name)) {

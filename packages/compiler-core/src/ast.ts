@@ -566,6 +566,23 @@ export function createRoot(
   }
 }
 
+/**
+ * 创建VNode对应的codegenNode
+ *
+ * @function createVNodeCall
+ * @author czzczz
+ * @param {TransformContext | null} context
+ * @param {VNodeCall['tag']} tag
+ * @param {VNodeCall['props']} [props]
+ * @param {VNodeCall['children']} [children]
+ * @param {VNodeCall['patchFlag']} [patchFlag]
+ * @param {VNodeCall['dynamicProps']} [dynamicProps]
+ * @param {VNodeCall['directives']} [directives]
+ * @param {VNodeCall['isBlock']} [isBlock=false]
+ * @param {VNodeCall['disableTracking']} [disableTracking=false]
+ * @param {any} [loc=locStub]
+ * @returns {object}
+ */
 export function createVNodeCall(
   context: TransformContext | null,
   tag: VNodeCall['tag'],

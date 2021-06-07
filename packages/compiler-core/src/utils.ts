@@ -53,6 +53,13 @@ export function isCoreComponent(tag: string): symbol | void {
 }
 
 const nonIdentifierRE = /^\d|[^\$\w]/
+/**
+ * 判断是否为简单标识符，如变量
+ *
+ * @function isSimpleIdentifier
+ * @author czzczz
+ * @param {string} name
+ */
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
@@ -155,6 +162,16 @@ export function assert(condition: boolean, msg?: string) {
   }
 }
 
+/**
+ * 寻找node上的目标directive指令
+ *
+ * @function findDir
+ * @author czzczz
+ * @param {ElementNode} node
+ * @param {string | RegExp} name
+ * @param {boolean} [allowEmpty=false]
+ * @returns {any}
+ */
 export function findDir(
   node: ElementNode,
   name: string | RegExp,
@@ -172,6 +189,17 @@ export function findDir(
   }
 }
 
+/**
+ * 寻找目标属性
+ *
+ * @function findProp
+ * @author czzczz
+ * @param {ElementNode} node
+ * @param {string} name
+ * @param {boolean} [dynamicOnly=false]
+ * @param {boolean} [allowEmpty=false]
+ * @returns {ElementNode['props'][0] | undefined}
+ */
 export function findProp(
   node: ElementNode,
   name: string,
@@ -220,6 +248,14 @@ export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
   return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
 }
 
+/**
+ * 判断是否为template抽象标签
+ *
+ * @function isTemplateNode
+ * @author czzczz
+ * @param {RootNode | TemplateChildNode} node
+ * @returns {any}
+ */
 export function isTemplateNode(
   node: RootNode | TemplateChildNode
 ): node is TemplateNode {
