@@ -3,6 +3,14 @@ import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
 
+/**
+ * style格式化，数组和字符串也转为对象
+ *
+ * @function normalizeStyle
+ * @author czzczz
+ * @param {unknown} value
+ * @returns {any}
+ */
 export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
   if (isArray(value)) {
     const res: NormalizedStyle = {}
@@ -56,6 +64,14 @@ export function stringifyStyle(styles: NormalizedStyle | undefined): string {
   return ret
 }
 
+/**
+ * 格式化class绑定数据，将数组或对象形式也转为字符串
+ *
+ * @function normalizeClass
+ * @author czzczz
+ * @param {unknown} value
+ * @returns {any}
+ */
 export function normalizeClass(value: unknown): string {
   let res = ''
   if (isString(value)) {

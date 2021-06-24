@@ -169,6 +169,7 @@ function doWatch(
     )
   }
 
+  // 针对不同的情况手动生成getter来添加依赖
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -241,6 +242,7 @@ function doWatch(
   }
 
   if (cb && deep) {
+    // 有deep，则深度遍历依赖
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
@@ -269,6 +271,7 @@ function doWatch(
     return NOOP
   }
 
+  // 利用闭包保留oldValue
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!runner.active) {
@@ -329,6 +332,7 @@ function doWatch(
     }
   }
 
+  // watchEffect收集依赖,lazy不会在创建时立即执行
   const runner = effect(getter, {
     lazy: true,
     onTrack,
@@ -336,6 +340,7 @@ function doWatch(
     scheduler
   })
 
+  // 副作用记录到当前组件实例上
   recordInstanceBoundEffect(runner, instance)
 
   // initial run
@@ -351,6 +356,7 @@ function doWatch(
     runner()
   }
 
+  // 返回对应的unwatch函数
   return () => {
     stop(runner)
     if (instance) {
@@ -393,6 +399,15 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
+/**
+ * 深度遍历value
+ *
+ * @function traverse
+ * @author czzczz
+ * @param {unknown} value
+ * @param {Set<unknown>} [seen=new Set()]
+ * @returns {any}
+ */
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
     return value

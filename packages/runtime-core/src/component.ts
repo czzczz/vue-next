@@ -423,8 +423,19 @@ export interface ComponentInternalInstance {
 
 const emptyAppContext = createAppContext()
 
+// 每个组件实例独立的uid
 let uid = 0
 
+/**
+ * 创建组件实例
+ *
+ * @function createComponentInstance
+ * @author czzczz
+ * @param {VNode} vnode
+ * @param {ComponentInternalInstance | null} parent
+ * @param {SuspenseBoundary | null} suspense
+ * @returns {any}
+ */
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -508,6 +519,7 @@ export function createComponentInstance(
   if (__DEV__) {
     instance.ctx = createRenderContext(instance)
   } else {
+    // 组件实例的ctx只有开发模式才有数据
     instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
@@ -570,6 +582,15 @@ export function setupComponent(
   return setupResult
 }
 
+/**
+ * 响应式组件实例初始化
+ *
+ * @function setupStatefulComponent
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {boolean} isSSR
+ * @returns {any}
+ */
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -581,6 +602,7 @@ function setupStatefulComponent(
       validateComponentName(Component.name, instance.appContext.config)
     }
     if (Component.components) {
+      // 引入的子组件
       const names = Object.keys(Component.components)
       for (let i = 0; i < names.length; i++) {
         validateComponentName(names[i], instance.appContext.config)
@@ -616,16 +638,19 @@ function setupStatefulComponent(
 
     currentInstance = instance
     pauseTracking()
+    // setup的结果可能是对象或者render函数
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
+      // setup的两个参数。props为浅只读
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
     currentInstance = null
 
     if (isPromise(setupResult)) {
+      // setup函数不可异步
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
@@ -653,12 +678,22 @@ function setupStatefulComponent(
   }
 }
 
+/**
+ * 处理setup函数的返回值
+ *
+ * @function handleSetupResult
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {unknown} setupResult
+ * @param {boolean} isSSR
+ */
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
   isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
+    // setup返回render函数
     // setup returned an inline render function
     if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
@@ -838,6 +873,14 @@ const attrHandlers: ProxyHandler<Data> = {
   }
 }
 
+/**
+ * 创建setup的上下文
+ *
+ * @function createSetupContext
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @returns {any}
+ */
 export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
@@ -859,6 +902,7 @@ export function createSetupContext(
         return shallowReadonly(instance.slots)
       },
       get emit() {
+        // emit之前创建组件实例已经bind过了，这里直接暴露
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
       expose

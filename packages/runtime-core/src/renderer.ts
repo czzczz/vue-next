@@ -291,6 +291,7 @@ const prodEffectOptions = {
   allowRecurse: true
 }
 
+// 把queueJob作为scheduler传给组件render的effect配置，通过queueJob的异步任务去重来降低页面重渲的频率
 function createDevEffectOptions(
   instance: ComponentInternalInstance
 ): ReactiveEffectOptions {
@@ -327,6 +328,7 @@ export const setRef = (
   }
 
   if (isAsyncWrapper(vnode) && !isUnmount) {
+    // 异步组件挂载
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
     return
@@ -488,12 +490,15 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = false
   ) => {
+    // 补丁过程发现新老节点类型不同，直接卸载老节点
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
     }
+
+    // 后续逻辑新老节点type及key相同
 
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
@@ -503,15 +508,19 @@ function baseCreateRenderer(
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
+        // 文本
         processText(n1, n2, container, anchor)
         break
       case Comment:
+        // 注释节点
         processCommentNode(n1, n2, container, anchor)
         break
       case Static:
+        // 静态节点
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, isSVG)
         } else if (__DEV__) {
+          // 开发模式才更新静态节点，用于热更新的
           patchStaticNode(n1, n2, container, isSVG)
         }
         break
@@ -590,6 +599,16 @@ function baseCreateRenderer(
     }
   }
 
+  /**
+   * 文本节点
+   *
+   * @function processText
+   * @author czzczz
+   * @param {any} n1
+   * @param {any} n2
+   * @param {any} container
+   * @param {any} anchor
+   */
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
     if (n1 == null) {
       hostInsert(
@@ -600,11 +619,22 @@ function baseCreateRenderer(
     } else {
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
+        // 更新DOM Node里面的文本
         hostSetText(el, n2.children as string)
       }
     }
   }
 
+  /**
+   *
+   *
+   * @function processCommentNode
+   * @author czzczz
+   * @param {any} n1
+   * @param {any} n2
+   * @param {any} container
+   * @param {any} anchor
+   */
   const processCommentNode: ProcessTextOrCommentFn = (
     n1,
     n2,
@@ -648,6 +678,7 @@ function baseCreateRenderer(
     container: RendererElement,
     isSVG: boolean
   ) => {
+    // 开发模式才会patch静态节点
     // static nodes are only patched during dev for HMR
     if (n2.children !== n1.children) {
       const anchor = hostNextSibling(n1.anchor!)
@@ -924,6 +955,7 @@ function baseCreateRenderer(
     let vnodeHook: VNodeHook | undefined | null
 
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
+      // 触发生命周期
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
     if (dirs) {
@@ -1366,6 +1398,7 @@ function baseCreateRenderer(
   }
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+    // 复用组件
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
@@ -1680,6 +1713,7 @@ function baseCreateRenderer(
     // fast path
     if (patchFlag > 0) {
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
+        // 对于children全部有key或部分有key
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
         patchKeyedChildren(
@@ -1842,6 +1876,7 @@ function baseCreateRenderer(
     // 1. sync from start
     // (a b) c
     // (a b) d e
+    // 从列表头部对比两份children中相同的元素，执行完成后i停止于无法patch的队列位置（从头开始的）
     while (i <= e1 && i <= e2) {
       const n1 = c1[i]
       const n2 = (c2[i] = optimized
@@ -1868,6 +1903,7 @@ function baseCreateRenderer(
     // 2. sync from end
     // a (b c)
     // d e (b c)
+    // 从尾部匹配相同的元素，执行完成后e1、e2停止于无法patch的队列位置（from end）
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = optimized
@@ -1899,7 +1935,9 @@ function baseCreateRenderer(
     // (a b)
     // c (a b)
     // i = 0, e1 = -1, e2 = 0
+    // i大于e1说明旧childnen全部被patch到了
     if (i > e1) {
+      // i小于e2说明新children没有被全部patch，联合上一条可得此次为新增了节点
       if (i <= e2) {
         const nextPos = e2 + 1
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
@@ -1929,6 +1967,8 @@ function baseCreateRenderer(
     // a (b c)
     // (b c)
     // i = 0, e1 = 0, e2 = -1
+    // i小于等于e1说明旧children没有patch完成，又有i大于e2说明新children已全部完成
+    // 说明本次剩余c1均为要删除的节点
     else if (i > e2) {
       while (i <= e1) {
         unmount(c1[i], parentComponent, parentSuspense, true)
@@ -1940,6 +1980,8 @@ function baseCreateRenderer(
     // [i ... e1 + 1]: a b [c d e] f g
     // [i ... e2 + 1]: a b [e d c h] f g
     // i = 2, e1 = 4, e2 = 5
+    // 不确定的队列，即新旧children都没有patch完成
+    // diff过程
     else {
       const s1 = i // prev starting index
       const s2 = i // next starting index
@@ -1947,6 +1989,7 @@ function baseCreateRenderer(
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<string | number, number> = new Map()
       for (i = s2; i <= e2; i++) {
+        // 将new children中没有patch的节点全部放入map中
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
           : normalizeVNode(c2[i]))
@@ -1962,10 +2005,12 @@ function baseCreateRenderer(
         }
       }
 
+      // 从前往后开始遍历 old children ，对匹配的节点进行patch，在新队列中没有的节点将删除
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
       let j
       let patched = 0
+      // 新队列节点数量
       const toBePatched = e2 - s2 + 1
       let moved = false
       // used to track whether any node has moved
@@ -1982,10 +2027,12 @@ function baseCreateRenderer(
         const prevChild = c1[i]
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
+          // 新节点全部被对应到老节点中了，老节点还有剩余元素
           unmount(prevChild, parentComponent, parentSuspense, true)
           continue
         }
         let newIndex
+        // 当前节点在new children中的位置
         if (prevChild.key != null) {
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
@@ -2001,14 +2048,17 @@ function baseCreateRenderer(
           }
         }
         if (newIndex === undefined) {
+          //new children找不到对应的节点，该删
           unmount(prevChild, parentComponent, parentSuspense, true)
         } else {
+          // 记录对应节点在old children中的位置
           newIndexToOldIndexMap[newIndex - s2] = i + 1
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex
           } else {
             moved = true
           }
+          // 新老队列中都有它，patch
           patch(
             prevChild,
             c2[newIndex] as VNode,
@@ -2024,6 +2074,7 @@ function baseCreateRenderer(
         }
       }
 
+      // 移动节点
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
@@ -2038,6 +2089,7 @@ function baseCreateRenderer(
           nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
+          // new children新增的节点，直接挂载
           patch(
             null,
             nextChild,
@@ -2053,6 +2105,7 @@ function baseCreateRenderer(
           // move if:
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
+          // 没在递增子序列的节点，移动
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
             move(nextChild, container, anchor, MoveType.REORDER)
           } else {
@@ -2063,6 +2116,17 @@ function baseCreateRenderer(
     }
   }
 
+  /**
+   * 对节点进行移动
+   *
+   * @function move
+   * @author czzczz
+   * @param {any} vnode
+   * @param {any} container
+   * @param {any} anchor
+   * @param {any} moveType
+   * @param {any} [parentSuspense=null]
+   */
   const move: MoveFn = (
     vnode,
     container,
@@ -2130,6 +2194,17 @@ function baseCreateRenderer(
     }
   }
 
+  /**
+   * 卸载节点
+   *
+   * @function unmount
+   * @author czzczz
+   * @param {any} vnode
+   * @param {any} parentComponent
+   * @param {any} parentSuspense
+   * @param {any} [doRemove=false]
+   * @param {any} [optimized=false]
+   */
   const unmount: UnmountFn = (
     vnode,
     parentComponent,
@@ -2149,6 +2224,7 @@ function baseCreateRenderer(
     } = vnode
     // unset ref
     if (ref != null) {
+      // 该节点被ref引用，把引用置空
       setRef(ref, null, parentSuspense, vnode, true)
     }
 
@@ -2455,6 +2531,14 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
   }
 }
 
+/**
+ * 生成最长递增子序列
+ *
+ * @function getSequence
+ * @author czzczz
+ * @param {number[]} arr
+ * @returns {any}
+ */
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 function getSequence(arr: number[]): number[] {
   const p = arr.slice()

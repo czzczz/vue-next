@@ -52,6 +52,15 @@ let currentPreFlushParentJob: SchedulerJob | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
+/**
+ * 将要执行的回调拼到刷新Promise后
+ *
+ * @function nextTick
+ * @author czzczz
+ * @param {ComponentPublicInstance | void} this
+ * @param {() => void} [fn]
+ * @returns {any}
+ */
 export function nextTick(
   this: ComponentPublicInstance | void,
   fn?: () => void
@@ -231,6 +240,9 @@ function flushJobs(seen?: CountMap) {
 
   flushPreFlushCbs(seen)
 
+  // 清空队列前根据id排序
+  // 1. 父组件的update要先执行，update即执行render函数的effect。
+  // 2. 一个组件在父组件更新时卸载，将不会触发自身的更新
   // Sort queue before flush.
   // This ensures that:
   // 1. Components are updated from parent to child. (because parent is always
@@ -245,8 +257,10 @@ function flushJobs(seen?: CountMap) {
       const job = queue[flushIndex]
       if (job) {
         if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
+          // 检查递归任务，例如update中更改了会导致rerender的数据
           continue
         }
+        // 执行所有任务
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }

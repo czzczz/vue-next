@@ -135,6 +135,16 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
+/**
+ * 对组件实例的props进行初始化
+ *
+ * @function initProps
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {Data | null} rawProps
+ * @param {number} isStateful
+ * @param {any} [isSSR=false]
+ */
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -162,6 +172,7 @@ export function initProps(
   }
 
   if (isStateful) {
+    // 组件参数响应式代理
     // stateful
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
@@ -304,6 +315,17 @@ export function updateProps(
   }
 }
 
+/**
+ * 对接收的实际参数列表进行拆分并进行默认值初始化
+ *
+ * @function setFullProps
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {Data | null} rawProps
+ * @param {Data} props
+ * @param {Data} attrs
+ * @returns {any}
+ */
 function setFullProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -312,8 +334,10 @@ function setFullProps(
 ) {
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
+  // rawProps 为vnode渲染时实际接收的参数
   if (rawProps) {
     for (let key in rawProps) {
+      // 内置的prop
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
@@ -333,10 +357,12 @@ function setFullProps(
       }
 
       const value = rawProps[key]
+      // 统一格式化为小驼峰
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
+        // 在props中有定义则放入props，否则放入attrs（事件处理函数除外）
         props[camelKey] = value
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
@@ -344,12 +370,14 @@ function setFullProps(
         // original key casing
         if (__COMPAT__) {
           if (isOn(key) && key.endsWith('Native')) {
+            // vue3不需要native，若在emits中没有定义对应的事件，对应的处理函数会直接作为原生事件
             key = key.slice(0, -6) // remove Native postfix
           } else if (shouldSkipAttr(key, instance)) {
             continue
           }
         }
         if (value !== attrs[key]) {
+          // 赋值前会判等
           attrs[key] = value
           hasAttrsChanged = true
         }
@@ -374,6 +402,18 @@ function setFullProps(
   return hasAttrsChanged
 }
 
+/**
+ * 对props数据进行处理（包括组件参数默认值及自动类型推断等）
+ *
+ * @function resolvePropValue
+ * @author czzczz
+ * @param {NormalizedProps} options
+ * @param {Data} props
+ * @param {string} key
+ * @param {unknown} value
+ * @param {ComponentInternalInstance} instance
+ * @returns {any}
+ */
 function resolvePropValue(
   options: NormalizedProps,
   props: Data,
@@ -386,8 +426,10 @@ function resolvePropValue(
     const hasDefault = hasOwn(opt, 'default')
     // default values
     if (hasDefault && value === undefined) {
+      // 若prop没传（限定undefined）则使用默认值
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
+        // 针对数组或对象的默认值会使用函数，此时函数的this可获取组件信息
         const { propsDefaults } = instance
         if (key in propsDefaults) {
           value = propsDefaults[key]
@@ -406,6 +448,7 @@ function resolvePropValue(
         value = defaultValue
       }
     }
+    // 推断true或false
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
       if (!hasOwn(props, key) && !hasDefault) {
@@ -414,6 +457,7 @@ function resolvePropValue(
         opt[BooleanFlags.shouldCastTrue] &&
         (value === '' || value === hyphenate(key))
       ) {
+        // value为空字符串或value与短线风格的key相同，转为true
         value = true
       }
     }

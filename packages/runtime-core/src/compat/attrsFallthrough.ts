@@ -2,6 +2,15 @@ import { isOn } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
 import { DeprecationTypes, isCompatEnabled } from './compatConfig'
 
+/**
+ * 不应放入attr的参数
+ *
+ * @function shouldSkipAttr
+ * @author czzczz
+ * @param {string} key
+ * @param {ComponentInternalInstance} instance
+ * @returns {any}
+ */
 export function shouldSkipAttr(
   key: string,
   instance: ComponentInternalInstance

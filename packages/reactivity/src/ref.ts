@@ -154,6 +154,15 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
+/**
+ * 对一个对象进行浅代理，之后对其任意键进行操作均会自动执行对ref的解包
+ *
+ * @function proxyRefs
+ * @author czzczz
+ * @template T
+ * @param {T} objectWithRefs
+ * @returns {any}
+ */
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {

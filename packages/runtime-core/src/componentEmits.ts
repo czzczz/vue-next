@@ -212,6 +212,15 @@ export function normalizeEmitsOptions(
   return (comp.__emits = normalized)
 }
 
+/**
+ * 判断接收的参数是否为组件定义的事件处理器
+ *
+ * @function isEmitListener
+ * @author czzczz
+ * @param {ObjectEmitsOptions | null} options
+ * @param {string} key
+ * @returns {any}
+ */
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.

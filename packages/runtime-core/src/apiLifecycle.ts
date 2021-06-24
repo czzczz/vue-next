@@ -20,6 +20,7 @@ export function injectHook(
   prepend: boolean = false
 ): Function | undefined {
   if (target) {
+    // 对应生命周期监听器
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
     // can be properly deduped by the scheduler. "__weh" stands for "with error
@@ -36,6 +37,7 @@ export function injectHook(
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
+        // 函数调用期间设置currentInstance。这个hook函数不可同步触发其他生命周期hook
         setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
         setCurrentInstance(null)

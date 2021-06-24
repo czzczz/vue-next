@@ -76,6 +76,13 @@ export function effect<T = any>(
   return effect
 }
 
+/**
+ * 禁用当前副作用
+ *
+ * @function stop
+ * @author czzczz
+ * @param {ReactiveEffect} effect
+ */
 export function stop(effect: ReactiveEffect) {
   if (effect.active) {
     cleanup(effect)

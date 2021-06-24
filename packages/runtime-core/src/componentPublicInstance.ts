@@ -505,6 +505,13 @@ export function createRenderContext(instance: ComponentInternalInstance) {
   return target as ComponentRenderContext
 }
 
+/**
+ * 开发模式下，将props暴露到渲染上下文上
+ *
+ * @function exposePropsOnRenderContext
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ */
 // dev only
 export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance

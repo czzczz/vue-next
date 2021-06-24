@@ -4,6 +4,16 @@ import { ComponentInternalInstance, Data } from '../component'
 import { ComponentOptions, resolveMergedOptions } from '../componentOptions'
 import { DeprecationTypes, warnDeprecation } from './compatConfig'
 
+/**
+ * 组件props设置的默认值函数里的this
+ *
+ * @function createPropsDefaultThis
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {Data} rawProps
+ * @param {string} propKey
+ * @returns {any}
+ */
 export function createPropsDefaultThis(
   instance: ComponentInternalInstance,
   rawProps: Data,

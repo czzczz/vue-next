@@ -181,6 +181,12 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted'
 )
 
+/**
+ * 生成带缓存的处理函数
+ *
+ * @param {Function} fn
+ * @returns {Function}
+ */
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
   return ((str: string) => {
@@ -202,6 +208,8 @@ export const camelize = cacheStringFunction(
 
 const hyphenateRE = /\B([A-Z])/g
 /**
+ * 小驼峰转为连字符风格
+ *
  * @private
  */
 export const hyphenate = cacheStringFunction((str: string) =>
@@ -239,6 +247,13 @@ export const invokeArrayFns = (fns: Function[], arg?: any) => {
   }
 }
 
+/**
+ * 为对象设置一个不可枚举的值
+ *
+ * @param {object} obj
+ * @param {string|symbol} key
+ * @param {any} value
+ */
 export const def = (obj: object, key: string | symbol, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,

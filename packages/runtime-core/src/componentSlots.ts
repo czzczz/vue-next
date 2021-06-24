@@ -121,6 +121,14 @@ const normalizeVNodeSlots = (
   instance.slots.default = () => normalized
 }
 
+/**
+ * 组件插槽初始化
+ *
+ * @function initSlots
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {VNodeNormalizedChildren} children
+ */
 export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren

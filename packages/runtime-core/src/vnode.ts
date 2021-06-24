@@ -278,6 +278,17 @@ export function isVNode(value: any): value is VNode {
   return value ? value.__v_isVNode === true : false
 }
 
+/**
+ * 对比两个VNode是否一致
+ *
+ * type全等且key全等
+ *
+ * @function isSameVNodeType
+ * @author czzczz
+ * @param {VNode} n1
+ * @param {VNode} n2
+ * @returns {boolean}
+ */
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
@@ -334,6 +345,19 @@ export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
 
+/**
+ * 创建VNode节点
+ *
+ * @function _createVNode
+ * @author czzczz
+ * @param {VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT} type
+ * @param {(Data & VNodeProps) | null} [props=null]
+ * @param {unknown} [children=null]
+ * @param {number} [patchFlag=0]
+ * @param {string[] | null} [dynamicProps=null]
+ * @param {any} [isBlockNode=false]
+ * @returns {any}
+ */
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -484,6 +508,18 @@ function _createVNode(
   return vnode
 }
 
+/**
+ * 复制VNode节点
+ *
+ * @function cloneVNode
+ * @author czzczz
+ * @template T
+ * @template U
+ * @param {VNode<T, U>} vnode
+ * @param {Data & VNodeProps | null} [extraProps]
+ * @param {any} [mergeRef=false]
+ * @returns {any}
+ */
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps | null,
@@ -602,9 +638,11 @@ export function createCommentVNode(
 
 export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null || typeof child === 'boolean') {
+    // null，undefined或者boolean值，替换为一个注释节点
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {
+    // 基于template的复数节点，替换为fragment节点
     // fragment
     return createVNode(Fragment, null, child)
   } else if (typeof child === 'object') {
