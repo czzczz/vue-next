@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -96,8 +96,7 @@ class RefImpl<T> {
   // 用于isRef判断是否为一个ref
   public readonly __v_isRef = true
 
-  constructor(private _rawValue: T, public readonly _shallow = false) {
-    // 如果是浅代理，则只为Ref.value生成代理。否则将深度地对整个值进行代理转换
+  constructor(private _rawValue: T, public readonly _shallow: boolean) {
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 

@@ -4,7 +4,8 @@ import {
   pauseTracking,
   resetTracking,
   shallowReadonly,
-  proxyRefs
+  proxyRefs,
+  markRaw
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -76,14 +77,6 @@ export interface AllowedComponentProps {
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
 export interface ComponentInternalOptions {
-  /**
-   * @internal
-   */
-  __props?: NormalizedPropsOptions
-  /**
-   * @internal
-   */
-  __emits?: ObjectEmitsOptions | null
   /**
    * @internal
    */
@@ -285,6 +278,12 @@ export interface ComponentInternalInstance {
    */
   emitsOptions: ObjectEmitsOptions | null
 
+  /**
+   * resolved inheritAttrs options
+   * @internal
+   */
+  inheritAttrs?: boolean
+
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -480,6 +479,9 @@ export function createComponentInstance(
     // props default value
     propsDefaults: EMPTY_OBJ,
 
+    // inheritAttrs
+    inheritAttrs: type.inheritAttrs,
+
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
@@ -626,7 +628,7 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
-  instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
+  instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
@@ -829,7 +831,7 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
-    applyOptions(instance, Component)
+    applyOptions(instance)
     resetTracking()
     currentInstance = null
   }
@@ -856,11 +858,9 @@ export function finishComponentSetup(
   }
 }
 
-const attrHandlers: ProxyHandler<Data> = {
+const attrDevProxyHandlers: ProxyHandler<Data> = {
   get: (target, key: string) => {
-    if (__DEV__) {
-      markAttrsAccessed()
-    }
+    markAttrsAccessed()
     return target[key]
   },
   set: () => {
@@ -892,11 +892,14 @@ export function createSetupContext(
   }
 
   if (__DEV__) {
+    let attrs: Data
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return new Proxy(instance.attrs, attrHandlers)
+        return (
+          attrs || (attrs = new Proxy(instance.attrs, attrDevProxyHandlers))
+        )
       },
       get slots() {
         return shallowReadonly(instance.slots)

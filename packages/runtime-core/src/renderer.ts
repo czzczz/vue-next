@@ -141,7 +141,8 @@ export interface RendererOptions<
     content: string,
     parent: HostElement,
     anchor: HostNode | null,
-    isSVG: boolean
+    isSVG: boolean,
+    cached?: [HostNode, HostNode | null] | null
   ): HostElement[]
 }
 
@@ -665,7 +666,11 @@ function baseCreateRenderer(
       n2.children as string,
       container,
       anchor,
-      isSVG
+      isSVG,
+      // pass cached nodes if the static node is being mounted multiple times
+      // so that runtime-dom can simply cloneNode() instead of inserting new
+      // HTML
+      n2.el && [n2.el, n2.anchor]
     )
   }
 
@@ -1105,16 +1110,19 @@ function baseCreateRenderer(
       const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
       const container =
+        // oldVNode may be an errored async setup() component inside Suspense
+        // which will not have a mounted element
+        oldVNode.el &&
         // - In the case of a Fragment, we need to provide the actual parent
         // of the Fragment itself so it can move its children.
-        oldVNode.type === Fragment ||
-        // - In the case of different nodes, there is going to be a replacement
-        // which also requires the correct parent container
-        !isSameVNodeType(oldVNode, newVNode) ||
-        // - In the case of a component, it could contain anything.
-        oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
-        oldVNode.shapeFlag & ShapeFlags.TELEPORT
-          ? hostParentNode(oldVNode.el!)!
+        (oldVNode.type === Fragment ||
+          // - In the case of different nodes, there is going to be a replacement
+          // which also requires the correct parent container
+          !isSameVNodeType(oldVNode, newVNode) ||
+          // - In the case of a component, it could contain anything.
+          oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
+          oldVNode.shapeFlag & ShapeFlags.TELEPORT)
+          ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
@@ -1199,7 +1207,7 @@ function baseCreateRenderer(
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
-    if (patchFlag > 0) {
+    if (dynamicChildren) {
       optimized = true
     }
 
@@ -1333,7 +1341,8 @@ function baseCreateRenderer(
   ) => {
     // 2.x compat may pre-creaate the component instance before actually
     // mounting
-    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const compatMountInstance =
+      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1495,7 +1504,7 @@ function baseCreateRenderer(
               // which means it won't track dependencies - but it's ok because
               // a server-rendered async wrapper is already in resolved state
               // and it will never need to change.
-              hydrateSubTree
+              () => !instance.isUnmounted && hydrateSubTree()
             )
           } else {
             hydrateSubTree()

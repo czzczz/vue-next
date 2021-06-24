@@ -28,6 +28,21 @@ export interface ReactiveEffectOptions {
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
+  /**
+   * Indicates whether the job is allowed to recursively trigger itself when
+   * managed by the scheduler.
+   *
+   * By default, a job cannot trigger itself because some built-in method calls,
+   * e.g. Array.prototype.push actually performs reads as well (#1740) which
+   * can lead to confusing infinite loops.
+   * The allowed cases are component update functions and watch callbacks.
+   * Component update functions may update child component props, which in turn
+   * trigger flush: "pre" watch callbacks that mutates state that the parent
+   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
+   * triggers itself again, it's likely intentional and it is the user's
+   * responsibility to perform recursive state mutation that eventually
+   * stabilizes (#1727).
+   */
   allowRecurse?: boolean
 }
 
@@ -113,8 +128,7 @@ function createReactiveEffect<T = any>(
 ): ReactiveEffect<T> {
   const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
-      // 副作用没有active，若有scheduler则返回空，否则返回目标函数运算结果
-      return options.scheduler ? undefined : fn()
+      return fn()
     }
     if (!effectStack.includes(effect)) {
       // 清除之前的依赖关系，即每次执行副作用都重新收集依赖

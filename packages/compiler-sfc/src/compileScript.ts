@@ -36,6 +36,7 @@ import { rewriteDefault } from './rewriteDefault'
 
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMIT = 'defineEmit'
+const DEFINE_EMITS = 'defineEmits'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -95,13 +96,24 @@ export function compileScript(
     )
   }
 
+  // TODO remove on 3.2
+  if (sfc.template && sfc.template.attrs['inherit-attrs'] === 'false') {
+    warnOnce(
+      `experimetnal support for <template inherit-attrs="false"> support has ` +
+        `been removed. Use a <script> block with \`export default\` to ` +
+        `declare options.`
+    )
+  }
+
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const cssVars = sfc.cssVars
-  const hasInheritAttrsFlag =
-    sfc.template && sfc.template.attrs['inherit-attrs'] === 'false'
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-  const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
+  const isTS =
+    scriptLang === 'ts' ||
+    scriptLang === 'tsx' ||
+    scriptSetupLang === 'ts' ||
+    scriptSetupLang === 'tsx'
   const plugins: ParserPlugin[] = [...babelParserDefaultPlugins, 'jsx']
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
@@ -110,7 +122,7 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && scriptLang !== 'ts') {
+    if (scriptLang && !isTS && scriptLang !== 'jsx') {
       // do not process non js/ts script blocks
       return script
     }
@@ -120,9 +132,8 @@ export function compileScript(
         sourceType: 'module'
       }).program.body
       const bindings = analyzeScriptBindings(scriptAst)
-      const needRewrite = cssVars.length || hasInheritAttrsFlag
       let content = script.content
-      if (needRewrite) {
+      if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
         if (cssVars.length) {
           content += genNormalScriptCssVarsCode(
@@ -131,9 +142,6 @@ export function compileScript(
             scopeId,
             !!options.isProd
           )
-        }
-        if (hasInheritAttrsFlag) {
-          content += `__default__.inheritAttrs = false`
         }
         content += `\nexport default __default__`
       }
@@ -156,7 +164,7 @@ export function compileScript(
     )
   }
 
-  if (scriptSetupLang && scriptSetupLang !== 'ts') {
+  if (scriptSetupLang && !isTS && scriptSetupLang !== 'jsx') {
     // do not process non js/ts script blocks
     return scriptSetup
   }
@@ -282,10 +290,10 @@ export function compileScript(
     return false
   }
 
-  function processDefineEmit(node: Node): boolean {
-    if (isCallOf(node, DEFINE_EMIT)) {
+  function processDefineEmits(node: Node): boolean {
+    if (isCallOf(node, DEFINE_EMIT) || isCallOf(node, DEFINE_EMITS)) {
       if (hasDefineEmitCall) {
-        error(`duplicate ${DEFINE_EMIT}() call`, node)
+        error(`duplicate ${DEFINE_EMITS}() call`, node)
       }
       hasDefineEmitCall = true
       emitRuntimeDecl = node.arguments[0]
@@ -305,7 +313,7 @@ export function compileScript(
           emitTypeDecl = typeArg
         } else {
           error(
-            `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
+            `type argument passed to ${DEFINE_EMITS}() must be a function type ` +
               `or a literal type with call signatures.`,
             typeArg
           )
@@ -348,7 +356,7 @@ export function compileScript(
             break
           }
         }
-        for (let i = left.end!; i > 0; i++) {
+        for (let i = right.end!; i > 0; i++) {
           const char = source[i + startOffset]
           if (char === ')') {
             s.remove(i + startOffset, i + startOffset + 1)
@@ -623,7 +631,9 @@ export function compileScript(
         const existing = userImports[local]
         if (
           source === 'vue' &&
-          (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
+          (imported === DEFINE_PROPS ||
+            imported === DEFINE_EMIT ||
+            imported === DEFINE_EMITS)
         ) {
           removeSpecifier(i)
         } else if (existing) {
@@ -647,11 +657,11 @@ export function compileScript(
       }
     }
 
-    // process `defineProps` and `defineEmit` calls
+    // process `defineProps` and `defineEmit(s)` calls
     if (
       node.type === 'ExpressionStatement' &&
       (processDefineProps(node.expression) ||
-        processDefineEmit(node.expression))
+        processDefineEmits(node.expression))
     ) {
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
@@ -665,14 +675,14 @@ export function compileScript(
               decl.id.end!
             )
           }
-          const isDefineEmit = processDefineEmit(decl.init)
-          if (isDefineEmit) {
+          const isDefineEmits = processDefineEmits(decl.init)
+          if (isDefineEmits) {
             emitIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
             )
           }
-          if (isDefineProps || isDefineEmit)
+          if (isDefineProps || isDefineEmits)
             if (node.declarations.length === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -936,16 +946,17 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+    returned = `{ ${Object.keys(allBindings).join(', ')}${
+      // the `__isScriptSetup: true` flag is used by componentPublicInstance
+      // proxy to allow properties that start with $ or _
+      __TEST__ ? `` : `, __isScriptSetup: true`
+    } }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 11. finalize default export
   // expose: [] makes <script setup> components "closed" by default.
   let runtimeOptions = `\n  expose: [],`
-  if (hasInheritAttrsFlag) {
-    runtimeOptions += `\n  inheritAttrs: false,`
-  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -1036,7 +1047,9 @@ function walkDeclaration(
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
         isConst &&
-        (isCallOf(init, DEFINE_PROPS) || isCallOf(init, DEFINE_EMIT))
+        (isCallOf(init, DEFINE_PROPS) ||
+          isCallOf(init, DEFINE_EMIT) ||
+          isCallOf(init, DEFINE_EMITS))
       )
       if (id.type === 'Identifier') {
         let bindingType

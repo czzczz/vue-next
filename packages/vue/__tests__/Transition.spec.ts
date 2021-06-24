@@ -1,6 +1,6 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
-import { h, createApp, Transition } from 'vue'
+import { h, createApp, Transition, ref, nextTick } from 'vue'
 
 describe('e2e: Transition', () => {
   const {
@@ -1325,6 +1325,69 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+
+    // #3963
+    test(
+      'Suspense fallback should work with transition',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+
+          const One = {
+            template: `<div>{{ msg }}</div>`,
+            setup() {
+              return new Promise(_resolve => {
+                // @ts-ignore
+                window.resolve = () =>
+                  _resolve({
+                    msg: 'success'
+                  })
+              })
+            }
+          }
+
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in">
+                  <Suspense :timeout="0">
+                    <template #default>
+                      <component :is="view" />
+                    </template>
+                    <template #fallback>
+                      <div>Loading...</div>
+                    </template>
+                  </Suspense>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const view = shallowRef(null)
+              const click = () => {
+                view.value = view.value ? null : h(One)
+              }
+              return { view, click }
+            }
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<!---->')
+
+        await click('#toggleBtn')
+        await nextFrame()
+        expect(await html('#container')).toBe('<div class="">Loading...</div>')
+
+        await page().evaluate(() => {
+          // @ts-ignore
+          window.resolve()
+        })
+
+        await transitionFinish(duration * 2)
+        expect(await html('#container')).toBe('<div class="">success</div>')
+      },
+      E2E_TIMEOUT
+    )
   })
 
   describe('transition with v-show', () => {
@@ -1634,23 +1697,6 @@ describe('e2e: Transition', () => {
     )
   })
 
-  test(
-    'warn when used on multiple elements',
-    async () => {
-      createApp({
-        render() {
-          return h(Transition, null, {
-            default: () => [h('div'), h('div')]
-          })
-        }
-      }).mount(document.createElement('div'))
-      expect(
-        '<transition> can only be used on a single element or component'
-      ).toHaveBeenWarned()
-    },
-    E2E_TIMEOUT
-  )
-
   describe('explicit durations', () => {
     test(
       'single value',
@@ -1915,5 +1961,60 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+  })
+
+  test('warn when used on multiple elements', async () => {
+    createApp({
+      render() {
+        return h(Transition, null, {
+          default: () => [h('div'), h('div')]
+        })
+      }
+    }).mount(document.createElement('div'))
+    expect(
+      '<transition> can only be used on a single element or component'
+    ).toHaveBeenWarned()
+  })
+
+  // #3227
+  test(`HOC w/ merged hooks`, async () => {
+    const innerSpy = jest.fn()
+    const outerSpy = jest.fn()
+
+    const MyTransition = {
+      render(this: any) {
+        return h(
+          Transition,
+          {
+            onLeave(el, end) {
+              innerSpy()
+              end()
+            }
+          },
+          this.$slots.default
+        )
+      }
+    }
+
+    const toggle = ref(true)
+
+    const root = document.createElement('div')
+    createApp({
+      render() {
+        return h(
+          MyTransition,
+          { onLeave: () => outerSpy() },
+          () => (toggle.value ? h('div') : null)
+        )
+      }
+    }).mount(root)
+
+    expect(root.innerHTML).toBe(`<div></div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(innerSpy).toHaveBeenCalledTimes(1)
+    expect(outerSpy).toHaveBeenCalledTimes(1)
+    expect(root.innerHTML).toBe(`<!---->`)
   })
 })

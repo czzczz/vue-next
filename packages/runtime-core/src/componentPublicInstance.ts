@@ -18,7 +18,6 @@ import {
   ReactiveEffect,
   toRaw,
   shallowReadonly,
-  ReactiveFlags,
   track,
   TrackOpTypes,
   ShallowUnwrapRef,
@@ -33,7 +32,8 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  shouldCacheAccess
+  shouldCacheAccess,
+  MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -188,7 +188,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: Options
+  $options: Options & MergedComponentOptionsOverride
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch(
@@ -267,14 +267,22 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
-    // let @vue/reactivity know it should never observe Vue public instances.
-    if (key === ReactiveFlags.SKIP) {
-      return true
-    }
-
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {
       return true
+    }
+
+    // prioritize <script setup> bindings during dev.
+    // this allows even properties that start with _ or $ to be used - so that
+    // it aligns with the production behavior where the render fn is inlined and
+    // indeed has access to all declared variables.
+    if (
+      __DEV__ &&
+      setupState !== EMPTY_OBJ &&
+      setupState.__isScriptSetup &&
+      hasOwn(setupState, key)
+    ) {
+      return setupState[key]
     }
 
     // data / props / ctx
@@ -538,7 +546,7 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
-    if (key[0] === '$' || key[0] === '_') {
+    if (!setupState.__isScriptSetup && (key[0] === '$' || key[0] === '_')) {
       warn(
         `setup() return property ${JSON.stringify(
           key
