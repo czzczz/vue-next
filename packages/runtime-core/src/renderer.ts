@@ -1806,6 +1806,21 @@ function baseCreateRenderer(
     }
   }
 
+  /**
+   * 对于完全没有key的children列表进行patch
+   *
+   * @function patchUnkeyedChildren
+   * @author czzczz
+   * @param {VNode[]} c1
+   * @param {VNodeArrayChildren} c2
+   * @param {RendererElement} container
+   * @param {RendererNode | null} anchor
+   * @param {ComponentInternalInstance | null} parentComponent
+   * @param {SuspenseBoundary | null} parentSuspense
+   * @param {boolean} isSVG
+   * @param {string[] | null} slotScopeIds
+   * @param {boolean} optimized
+   */
   const patchUnkeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
@@ -1823,6 +1838,7 @@ function baseCreateRenderer(
     const newLength = c2.length
     const commonLength = Math.min(oldLength, newLength)
     let i
+    // 从前开始依次对两个列表同下标的节点进行patch
     for (i = 0; i < commonLength; i++) {
       const nextChild = (c2[i] = optimized
         ? cloneIfMounted(c2[i] as VNode)
@@ -1840,6 +1856,7 @@ function baseCreateRenderer(
       )
     }
     if (oldLength > newLength) {
+      // 旧节点多于新节点，多余部分删除
       // remove old
       unmountChildren(
         c1,
@@ -1850,6 +1867,7 @@ function baseCreateRenderer(
         commonLength
       )
     } else {
+      // 挂载新节点
       // mount new
       mountChildren(
         c2,
