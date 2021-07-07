@@ -87,6 +87,24 @@ export interface CodegenContext
   newline(): void
 }
 
+/**
+ * 目标代码生成的上下文
+ *
+ * @function createCodegenContext
+ * @author czzczz
+ * @param {RootNode} ast
+ * @param {CodegenOptions} root1
+ * @param {string} [root1.mode='function']
+ * @param {boolean} [root1.prefixIdentifiers=mode === 'module']
+ * @param {any} [root1.sourceMap=false]
+ * @param {string} [root1.filename=`template.vue.html`]
+ * @param {any} [root1.scopeId=null]
+ * @param {any} [root1.optimizeImports=false]
+ * @param {string} [root1.runtimeGlobalName=`Vue`]
+ * @param {string} [root1.runtimeModuleName=`vue`]
+ * @param {any} [root1.ssr=false]
+ * @returns {any}
+ */
 function createCodegenContext(
   ast: RootNode,
   {
@@ -184,6 +202,17 @@ function createCodegenContext(
   return context
 }
 
+/**
+ * 根据模板编译完成并节点解析完成的ast生成目标代码（render函数）
+ * 
+ * @function generate
+ * @author czzczz
+ * @param {RootNode} ast 
+ * @param {CodegenOptions & {
+    onContextCreated?: (context: CodegenContext) => void
+  }} [options={}] 
+ * @returns {object} 
+ */
 export function generate(
   ast: RootNode,
   options: CodegenOptions & {
@@ -220,6 +249,7 @@ export function generate(
     genFunctionPreamble(ast, preambleContext)
   }
 
+  // render入口以及上下文参数
   // enter render function
   const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
@@ -292,6 +322,7 @@ export function generate(
     newline()
   }
 
+  // 生成VNode主体内容
   // generate the VNode tree expression
   if (!ssr) {
     push(`return `)
@@ -587,6 +618,15 @@ function genNodeList(
   }
 }
 
+/**
+ * 根据VNode生成render内容
+ *
+ * @function genNode
+ * @author czzczz
+ * @param {CodegenNode | symbol | string} node
+ * @param {CodegenContext} context 上下文
+ * @returns {void}
+ */
 function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
   if (isString(node)) {
     context.push(node)

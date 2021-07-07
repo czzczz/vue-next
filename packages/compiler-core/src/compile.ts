@@ -109,6 +109,7 @@ export function baseCompile(
     })
   )
 
+  // 生成目标代码
   return generate(
     ast,
     extend({}, options, {

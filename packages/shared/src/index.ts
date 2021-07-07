@@ -262,6 +262,12 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   })
 }
 
+/**
+ * 若目标值可通过parseFloat转为数字则转，若为NaN则为原值
+ *
+ * @param {any} val 目标
+ * @returns {any} 转换结果
+ */
 export const toNumber = (val: any): any => {
   const n = parseFloat(val)
   return isNaN(n) ? val : n

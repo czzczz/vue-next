@@ -48,6 +48,16 @@ export type EmitFn<
         }[Event]
       >
 
+/**
+ * 触发事件
+ *
+ * @function emit
+ * @author czzczz
+ * @param {ComponentInternalInstance} instance
+ * @param {string} event
+ * @param {...any[]} rawArgs
+ * @returns {any}
+ */
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
@@ -56,6 +66,7 @@ export function emit(
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
+    // 校验emit调用
     const {
       emitsOptions,
       propsOptions: [propsOptions]
@@ -95,9 +106,11 @@ export function emit(
   // for v-model update:xxx events, apply modifiers on args
   const modelArg = isModelListener && event.slice(7)
   if (modelArg && modelArg in props) {
+    // 判断v-model的事件
     const modifiersKey = `${
       modelArg === 'modelValue' ? 'model' : modelArg
     }Modifiers`
+    // v-model的修饰符
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
       args = rawArgs.map(a => a.trim())
